@@ -97,6 +97,9 @@ export class EmployeeService {
     // Get employee by PIN for login (includes inactive check)
     async getEmployeeByPinForLogin(pin) {
         try {
+            // First ensure we have at least one admin account
+            await this.ensureActiveAdmin();
+            
             const employee = await this.getEmployeeByPin(pin);
             
             if (!employee) {
@@ -344,7 +347,7 @@ export class EmployeeService {
             
             if (error) throw error;
             
-            // If no active admins, activate the first admin found
+            // If no active admins, try to activate an existing admin
             if (activeAdmins.length === 0) {
                 const { data: allAdmins, error: allAdminsError } = await this.supabase
                     .from('employees')
@@ -366,6 +369,34 @@ export class EmployeeService {
                     
                     console.log('Activated admin account:', data.name);
                     return data;
+                } else {
+                    // No admin accounts exist at all, create a default one
+                    console.log('No admin accounts found, creating default admin...');
+                    
+                    const defaultAdmin = {
+                        name: 'ผู้ดูแลระบบ',
+                        pin: '1234',
+                        role: 'admin'
+                    };
+                    
+                    const { data: newAdmin, error: createError } = await this.supabase
+                        .from('employees')
+                        .insert([{
+                            name: defaultAdmin.name,
+                            pin: defaultAdmin.pin,
+                            role: defaultAdmin.role,
+                            is_active: true
+                        }])
+                        .select()
+                        .single();
+                    
+                    if (createError) {
+                        console.error('Failed to create default admin:', createError);
+                        throw createError;
+                    }
+                    
+                    console.log('Created default admin account with PIN: 1234');
+                    return newAdmin;
                 }
             }
             
