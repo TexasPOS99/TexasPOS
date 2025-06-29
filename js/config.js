@@ -1,9 +1,5 @@
 // Configuration
 export const CONFIG = {
-    // Supabase Configuration
-    SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
-    SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
-    
     // App Configuration
     APP_NAME: 'TexasPOS',
     APP_VERSION: '1.0.0',
@@ -13,9 +9,11 @@ export const CONFIG = {
     LOADING_MIN_DURATION: 1000,
     ANIMATION_DURATION: 300,
     
+    // Session Configuration
+    SESSION_TIMEOUT: 8 * 60 * 60 * 1000, // 8 hours
+    
     // Business Logic
     LOW_STOCK_THRESHOLD: 10,
-    AUTO_LOGOUT_TIME: 30 * 60 * 1000, // 30 minutes
     
     // Pagination
     ITEMS_PER_PAGE: 20,
@@ -47,11 +45,6 @@ export const CONFIG = {
         sale: 'ขาย',
         adjustment: 'ปรับปรุง',
         restock: 'เติมสต็อก'
-    },
-    
-    // API Endpoints (if needed for external services)
-    API_ENDPOINTS: {
-        // Add external API endpoints here if needed
     },
     
     // Local Storage Keys
@@ -94,18 +87,6 @@ export const CONFIG = {
         MAX_PRICE: 999999.99,
         MIN_STOCK: 0,
         MAX_STOCK: 999999
-    },
-    
-    // Feature Flags
-    FEATURES: {
-        ENABLE_BARCODE_SCANNER: false,
-        ENABLE_RECEIPT_PRINTER: false,
-        ENABLE_CASH_DRAWER: false,
-        ENABLE_CUSTOMER_DISPLAY: false,
-        ENABLE_LOYALTY_PROGRAM: false,
-        ENABLE_MULTI_CURRENCY: false,
-        ENABLE_TAX_CALCULATION: false,
-        ENABLE_DISCOUNT_SYSTEM: false
     },
     
     // Debug Mode

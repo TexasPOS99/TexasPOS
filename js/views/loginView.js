@@ -1,20 +1,17 @@
-// Login View
+// Login View - Simplified
 import { AuthService } from '../services/authService.js';
-import { EmployeeService } from '../services/employeeService.js';
 import { Toast } from '../components/toast.js';
 import { Spinner } from '../components/spinner.js';
 import { CONFIG } from '../config.js';
 
 export class LoginView {
     constructor() {
-        this.employeeService = new EmployeeService();
         this.authService = new AuthService();
-        this.authService.setEmployeeService(this.employeeService);
         this.toast = new Toast();
         this.spinner = new Spinner();
         
         this.pin = '';
-        this.maxPinLength = CONFIG.VALIDATION.PIN_LENGTH;
+        this.maxPinLength = 4;
         this.isLoggingIn = false;
         
         this.init();
@@ -24,7 +21,6 @@ export class LoginView {
         this.setupElements();
         this.setupEventListeners();
         this.checkExistingSession();
-        this.ensureSystemAccess();
     }
     
     setupElements() {
@@ -132,7 +128,6 @@ export class LoginView {
     }
     
     addRippleEffect() {
-        // Add visual feedback for button press
         const lastFilledDot = document.querySelector('.pin-dot.filled:last-of-type');
         if (lastFilledDot) {
             lastFilledDot.style.transform = 'scale(1.1)';
@@ -177,7 +172,7 @@ export class LoginView {
             // Simulate minimum loading time for better UX
             const loginPromise = this.authService.loginWithPin(this.pin);
             const minLoadingPromise = new Promise(resolve => 
-                setTimeout(resolve, CONFIG.LOADING_MIN_DURATION)
+                setTimeout(resolve, 1000)
             );
             
             // Update progress
@@ -207,7 +202,7 @@ export class LoginView {
             // Show error state
             this.showErrorState();
             
-            // Show error toast with more specific message
+            // Show error toast
             this.toast.error(error.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
             
             // Clear PIN after error
@@ -219,21 +214,9 @@ export class LoginView {
     
     checkExistingSession() {
         // Check if user is already logged in
-        const currentUser = this.authService.getCurrentUser();
-        if (currentUser) {
+        if (this.authService.isLoggedIn()) {
             // Redirect to POS if already logged in
             window.location.href = '/pos.html';
-        }
-    }
-    
-    // Ensure system access by checking for active admin
-    async ensureSystemAccess() {
-        try {
-            // Ensure at least one admin is active
-            await this.employeeService.ensureActiveAdmin();
-        } catch (error) {
-            console.error('Failed to ensure system access:', error);
-            // Don't show error to user as this is a background operation
         }
     }
     
@@ -285,69 +268,14 @@ export class LoginView {
         }
     }
     
-    // Handle page visibility change
-    handleVisibilityChange() {
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                // Page is hidden, pause any timers
-                this.clearPin();
-            } else {
-                // Page is visible again, reset state
-                this.clearErrorState();
-            }
-        });
-    }
-    
-    // Add accessibility features
-    addAccessibilityFeatures() {
-        // Add ARIA labels
-        this.pinDots.forEach((dot, index) => {
-            dot.setAttribute('aria-label', `PIN digit ${index + 1}`);
-            dot.setAttribute('role', 'status');
-        });
-        
-        this.keypadButtons.forEach(button => {
-            const number = button.dataset.number;
-            button.setAttribute('aria-label', `Enter digit ${number}`);
-        });
-        
-        if (this.deleteButton) {
-            this.deleteButton.setAttribute('aria-label', 'Delete last digit');
-        }
-        
-        // Add keyboard navigation
-        this.keypadButtons.forEach((button, index) => {
-            button.addEventListener('keydown', (e) => {
-                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    const nextIndex = (index + 1) % this.keypadButtons.length;
-                    this.keypadButtons[nextIndex].focus();
-                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    const prevIndex = (index - 1 + this.keypadButtons.length) % this.keypadButtons.length;
-                    this.keypadButtons[prevIndex].focus();
-                }
-            });
-        });
-    }
-    
     // Initialize all features
     initializeFeatures() {
         this.addKeypadFeedback();
-        this.handleVisibilityChange();
-        this.addAccessibilityFeatures();
     }
     
     // Destroy view
     destroy() {
-        // Clean up event listeners
-        document.removeEventListener('keydown', this.handleKeyboardInput);
-        document.removeEventListener('visibilitychange', this.handleVisibilityChange);
-        
-        // Clear any pending timeouts
         this.clearPin();
-        
-        // Hide spinner if visible
         this.spinner.hide();
     }
 }

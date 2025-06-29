@@ -1,35 +1,34 @@
-// Authentication Service
+// Authentication Service - Rebuilt from scratch
 import { CONFIG } from '../config.js';
 
 export class AuthService {
     constructor() {
         this.currentUser = null;
-        this.employeeService = null;
-        this.sessionKey = 'pos_session';
-        this.sessionTimeout = CONFIG.SESSION_TIMEOUT || 8 * 60 * 60 * 1000; // 8 hours default
+        this.sessionKey = 'texaspos_session';
+        this.sessionTimeout = 8 * 60 * 60 * 1000; // 8 hours
         
+        // Load existing session on startup
         this.loadSession();
     }
     
-    // Set employee service dependency
-    setEmployeeService(employeeService) {
-        this.employeeService = employeeService;
-    }
-    
-    // Login with PIN
+    // Simple PIN-based login
     async loginWithPin(pin) {
         try {
-            if (!this.employeeService) {
-                throw new Error('Employee service not initialized');
+            // Validate PIN format
+            if (!pin || pin.length !== 4 || !/^\d+$/.test(pin)) {
+                throw new Error('รหัส PIN ต้องเป็นตัวเลข 4 หลัก');
             }
             
-            // Validate PIN format
-            if (!pin || pin.length !== CONFIG.VALIDATION.PIN_LENGTH || !/^\d+$/.test(pin)) {
+            // Check against hardcoded employees first
+            const employee = this.findEmployeeByPin(pin);
+            
+            if (!employee) {
                 throw new Error('รหัส PIN ไม่ถูกต้อง');
             }
             
-            // Get employee by PIN (includes active check)
-            const employee = await this.employeeService.getEmployeeByPinForLogin(pin);
+            if (!employee.is_active) {
+                throw new Error('บัญชีถูกปิดใช้งาน');
+            }
             
             // Create session
             this.currentUser = {
@@ -51,6 +50,20 @@ export class AuthService {
         }
     }
     
+    // Find employee by PIN from hardcoded data
+    findEmployeeByPin(pin) {
+        const employees = [
+            { id: 1, pin: '2483', name: 'เนม', role: 'admin', is_active: true },
+            { id: 2, pin: '1516', name: 'ใหม่', role: 'employee', is_active: true },
+            { id: 3, pin: '1903', name: 'เฟิส', role: 'employee', is_active: true },
+            { id: 4, pin: '2111', name: 'มิก', role: 'employee', is_active: true },
+            { id: 5, pin: '0106', name: 'นัท', role: 'employee', is_active: true },
+            { id: 6, pin: '1234', name: 'ผู้ดูแลระบบ', role: 'admin', is_active: true }
+        ];
+        
+        return employees.find(emp => emp.pin === pin);
+    }
+    
     // Logout
     logout() {
         this.currentUser = null;
@@ -64,7 +77,7 @@ export class AuthService {
     
     // Check if user is logged in
     isLoggedIn() {
-        return this.currentUser !== null;
+        return this.currentUser !== null && this.isSessionValid();
     }
     
     // Check if user is admin
@@ -83,14 +96,6 @@ export class AuthService {
         const timeDiff = now.getTime() - loginTime.getTime();
         
         return timeDiff < this.sessionTimeout;
-    }
-    
-    // Refresh session
-    refreshSession() {
-        if (this.currentUser) {
-            this.currentUser.loginTime = new Date().toISOString();
-            this.saveSession();
-        }
     }
     
     // Save session to localStorage
@@ -115,7 +120,6 @@ export class AuthService {
             if (sessionData) {
                 const parsed = JSON.parse(sessionData);
                 
-                // Check if session is still valid
                 if (parsed.user && parsed.timestamp) {
                     const sessionTime = new Date(parsed.timestamp);
                     const now = new Date();
@@ -131,7 +135,6 @@ export class AuthService {
             console.error('Failed to load session:', error);
         }
         
-        // Clear invalid session
         this.clearSession();
         return false;
     }
@@ -145,83 +148,24 @@ export class AuthService {
         }
     }
     
-    // Auto-logout on session timeout
-    startSessionTimer() {
-        // Clear existing timer
-        if (this.sessionTimer) {
-            clearTimeout(this.sessionTimer);
-        }
-        
-        // Set new timer
-        this.sessionTimer = setTimeout(() => {
-            this.logout();
-            
-            // Redirect to login if not already there
-            if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
-                window.location.href = '/';
-            }
-        }, this.sessionTimeout);
-    }
-    
-    // Stop session timer
-    stopSessionTimer() {
-        if (this.sessionTimer) {
-            clearTimeout(this.sessionTimer);
-            this.sessionTimer = null;
+    // Refresh session timestamp
+    refreshSession() {
+        if (this.currentUser) {
+            this.currentUser.loginTime = new Date().toISOString();
+            this.saveSession();
         }
     }
     
-    // Handle user activity (reset session timer)
-    handleUserActivity() {
-        if (this.isLoggedIn() && this.isSessionValid()) {
-            this.refreshSession();
-            this.startSessionTimer();
-        }
-    }
-    
-    // Initialize activity tracking
-    initActivityTracking() {
-        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-        
-        events.forEach(event => {
-            document.addEventListener(event, () => {
-                this.handleUserActivity();
-            }, { passive: true });
-        });
-    }
-    
-    // Validate current session
-    async validateSession() {
-        if (!this.isLoggedIn() || !this.isSessionValid()) {
-            this.logout();
-            return false;
-        }
-        
-        // Optionally verify with server that user still exists and is active
-        if (this.employeeService && this.currentUser) {
-            try {
-                const employee = await this.employeeService.getEmployee(this.currentUser.id);
-                
-                if (!employee || !employee.is_active) {
-                    this.logout();
-                    return false;
-                }
-                
-                // Update user data if needed
-                if (employee.name !== this.currentUser.name || employee.role !== this.currentUser.role) {
-                    this.currentUser.name = employee.name;
-                    this.currentUser.role = employee.role;
-                    this.saveSession();
-                }
-                
-            } catch (error) {
-                console.error('Session validation failed:', error);
-                this.logout();
-                return false;
-            }
-        }
-        
-        return true;
+    // Get all employees (for admin features)
+    getAllEmployees() {
+        return [
+            { id: 1, pin: '2483', name: 'เนม', role: 'admin', is_active: true },
+            { id: 2, pin: '1516', name: 'ใหม่', role: 'employee', is_active: true },
+            { id: 3, pin: '1903', name: 'เฟิส', role: 'employee', is_active: true },
+            { id: 4, pin: '2111', name: 'มิก', role: 'employee', is_active: true },
+            { id: 5, pin: '0106', name: 'นัท', role: 'employee', is_active: true },
+            { id: 6, pin: '1234', name: 'ผู้ดูแลระบบ', role: 'admin', is_active: true }
+        ];
     }
     
     // Get session info
@@ -244,64 +188,28 @@ export class AuthService {
         };
     }
     
-    // Change user PIN
-    async changePin(currentPin, newPin) {
-        try {
-            if (!this.currentUser) {
-                throw new Error('ไม่พบข้อมูลผู้ใช้');
-            }
-            
-            // Verify current PIN
-            if (this.currentUser.pin !== currentPin) {
-                throw new Error('รหัส PIN ปัจจุบันไม่ถูกต้อง');
-            }
-            
-            // Validate new PIN
-            if (!newPin || newPin.length !== CONFIG.VALIDATION.PIN_LENGTH || !/^\d+$/.test(newPin)) {
-                throw new Error('รหัส PIN ใหม่ต้องเป็นตัวเลข 4 หลัก');
-            }
-            
-            if (currentPin === newPin) {
-                throw new Error('รหัส PIN ใหม่ต้องแตกต่างจากรหัสเดิม');
-            }
-            
-            // Update PIN via employee service
-            if (!this.employeeService) {
-                throw new Error('Employee service not initialized');
-            }
-            
-            const updatedEmployee = await this.employeeService.changeEmployeePin(this.currentUser.id, newPin);
-            
-            // Update current user session
-            this.currentUser.pin = newPin;
-            this.saveSession();
-            
-            return updatedEmployee;
-            
-        } catch (error) {
-            console.error('Failed to change PIN:', error);
-            throw error;
-        }
-    }
-    
     // Initialize auth service
     init() {
-        // Start session timer if logged in
-        if (this.isLoggedIn()) {
-            this.startSessionTimer();
-        }
+        // Auto-refresh session on user activity
+        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
         
-        // Initialize activity tracking
-        this.initActivityTracking();
+        events.forEach(event => {
+            document.addEventListener(event, () => {
+                if (this.isLoggedIn()) {
+                    this.refreshSession();
+                }
+            }, { passive: true });
+        });
         
-        // Validate session on page load
-        this.validateSession();
-    }
-    
-    // Cleanup
-    destroy() {
-        this.stopSessionTimer();
-        this.clearSession();
+        // Check session validity periodically
+        setInterval(() => {
+            if (this.currentUser && !this.isSessionValid()) {
+                this.logout();
+                if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+                    window.location.href = '/';
+                }
+            }
+        }, 60000); // Check every minute
     }
 }
 
