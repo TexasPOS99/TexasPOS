@@ -1,55 +1,301 @@
-// Product Service
-import { createClient } from '@supabase/supabase-js';
+// Product Service - Fixed for hardcoded data
 import { CONFIG } from '../config.js';
 
 export class ProductService {
     constructor() {
-        this.supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+        this.products = [];
+        this.categories = [];
+        this.initializeData();
+    }
+    
+    // Initialize hardcoded data
+    initializeData() {
+        // Categories
+        this.categories = [
+            { id: 1, code: 'CIG', name: 'บุหรี่', description: 'บุหรี่ทุกชนิด', is_active: true },
+            { id: 2, code: 'MED', name: 'ยาน้ำแก้ไอ', description: 'ยาน้ำแก้ไอทุกชนิด', is_active: true },
+            { id: 3, code: 'DRINK', name: 'น้ำดิบ / ผสม', description: 'เครื่องดื่มทุกชนิด', is_active: true },
+            { id: 4, code: 'OTHER', name: 'อื่นๆ', description: 'สินค้าอื่นๆ', is_active: true }
+        ];
+        
+        // Products with prices
+        this.products = [
+            // บุหรี่
+            {
+                id: 1,
+                name: 'บุหรี่40',
+                category_id: 1,
+                category_name: 'บุหรี่',
+                barcode: 'CIG001',
+                image_url: null,
+                stock: 50,
+                min_stock: 10,
+                is_active: true,
+                prices: [
+                    { id: 1, product_id: 1, price: 40, label: 'ซองละ', is_default: true, is_active: true }
+                ]
+            },
+            {
+                id: 2,
+                name: 'บุหรี่50',
+                category_id: 1,
+                category_name: 'บุหรี่',
+                barcode: 'CIG002',
+                image_url: null,
+                stock: 30,
+                min_stock: 10,
+                is_active: true,
+                prices: [
+                    { id: 2, product_id: 2, price: 50, label: 'ซองละ', is_default: true, is_active: true }
+                ]
+            },
+            {
+                id: 3,
+                name: 'บุหรี่60',
+                category_id: 1,
+                category_name: 'บุหรี่',
+                barcode: 'CIG003',
+                image_url: null,
+                stock: 25,
+                min_stock: 10,
+                is_active: true,
+                prices: [
+                    { id: 3, product_id: 3, price: 60, label: 'ซองละ', is_default: true, is_active: true }
+                ]
+            },
+            
+            // ยาน้ำแก้ไอ
+            {
+                id: 4,
+                name: 'ยาฝาเงิน',
+                category_id: 2,
+                category_name: 'ยาน้ำแก้ไอ',
+                barcode: 'MED001',
+                image_url: null,
+                stock: 20,
+                min_stock: 5,
+                is_active: true,
+                prices: [
+                    { id: 4, product_id: 4, price: 60, label: 'ขวดละ', is_default: true, is_active: true }
+                ]
+            },
+            {
+                id: 5,
+                name: 'ยาฝาแดง',
+                category_id: 2,
+                category_name: 'ยาน้ำแก้ไอ',
+                barcode: 'MED002',
+                image_url: null,
+                stock: 15,
+                min_stock: 5,
+                is_active: true,
+                prices: [
+                    { id: 5, product_id: 5, price: 70, label: 'ขวดละ', is_default: true, is_active: true }
+                ]
+            },
+            
+            // น้ำดิบ / ผสม
+            {
+                id: 6,
+                name: 'น้ำดิบ',
+                category_id: 3,
+                category_name: 'น้ำดิบ / ผสม',
+                barcode: 'DRK001',
+                image_url: null,
+                stock: 40,
+                min_stock: 10,
+                is_active: true,
+                prices: [
+                    { id: 6, product_id: 6, price: 40, label: 'ขวดละ', is_default: true, is_active: true },
+                    { id: 7, product_id: 6, price: 25, label: 'ขวดเล็ก', is_default: false, is_active: true }
+                ]
+            },
+            {
+                id: 7,
+                name: 'น้ำผสมฝาเงิน',
+                category_id: 3,
+                category_name: 'น้ำดิบ / ผสม',
+                barcode: 'DRK002',
+                image_url: null,
+                stock: 35,
+                min_stock: 10,
+                is_active: true,
+                prices: [
+                    { id: 8, product_id: 7, price: 80, label: 'ขวดละ', is_default: true, is_active: true },
+                    { id: 9, product_id: 7, price: 50, label: 'ขวดเล็ก', is_default: false, is_active: true },
+                    { id: 10, product_id: 7, price: 60, label: 'ขวดกลาง', is_default: false, is_active: true },
+                    { id: 11, product_id: 7, price: 90, label: 'ขวดใหญ่', is_default: false, is_active: true }
+                ]
+            },
+            {
+                id: 8,
+                name: 'น้ำผสมฝาแดง',
+                category_id: 3,
+                category_name: 'น้ำดิบ / ผสม',
+                barcode: 'DRK003',
+                image_url: null,
+                stock: 30,
+                min_stock: 10,
+                is_active: true,
+                prices: [
+                    { id: 12, product_id: 8, price: 90, label: 'ขวดละ', is_default: true, is_active: true },
+                    { id: 13, product_id: 8, price: 60, label: 'ขวดเล็ก', is_default: false, is_active: true }
+                ]
+            },
+            
+            // อื่นๆ
+            {
+                id: 9,
+                name: 'น้ำตาลสด',
+                category_id: 4,
+                category_name: 'อื่นๆ',
+                barcode: 'OTH001',
+                image_url: null,
+                stock: 60,
+                min_stock: 20,
+                is_active: true,
+                prices: [
+                    { id: 14, product_id: 9, price: 12, label: 'ขวดละ', is_default: true, is_active: true }
+                ]
+            },
+            {
+                id: 10,
+                name: 'โค้ก',
+                category_id: 4,
+                category_name: 'อื่นๆ',
+                barcode: 'OTH002',
+                image_url: null,
+                stock: 45,
+                min_stock: 15,
+                is_active: true,
+                prices: [
+                    { id: 15, product_id: 10, price: 17, label: 'ขวดละ', is_default: true, is_active: true }
+                ]
+            },
+            {
+                id: 11,
+                name: 'อิชิตัน',
+                category_id: 4,
+                category_name: 'อื่นๆ',
+                barcode: 'OTH003',
+                image_url: null,
+                stock: 35,
+                min_stock: 10,
+                is_active: true,
+                prices: [
+                    { id: 16, product_id: 11, price: 10, label: 'ขวดละ', is_default: true, is_active: true }
+                ]
+            },
+            {
+                id: 12,
+                name: 'ใบขีด',
+                category_id: 4,
+                category_name: 'อื่นๆ',
+                barcode: 'OTH004',
+                image_url: null,
+                stock: 100,
+                min_stock: 30,
+                is_active: true,
+                prices: [
+                    { id: 17, product_id: 12, price: 15, label: 'ใบละ', is_default: true, is_active: true }
+                ]
+            },
+            {
+                id: 13,
+                name: 'ใบครึ่งโล',
+                category_id: 4,
+                category_name: 'อื่นๆ',
+                barcode: 'OTH005',
+                image_url: null,
+                stock: 25,
+                min_stock: 5,
+                is_active: true,
+                prices: [
+                    { id: 18, product_id: 13, price: 60, label: 'ใบละ', is_default: true, is_active: true }
+                ]
+            },
+            {
+                id: 14,
+                name: 'ใบกิโล',
+                category_id: 4,
+                category_name: 'อื่นๆ',
+                barcode: 'OTH006',
+                image_url: null,
+                stock: 15,
+                min_stock: 3,
+                is_active: true,
+                prices: [
+                    { id: 19, product_id: 14, price: 99, label: 'ใบละ', is_default: true, is_active: true }
+                ]
+            },
+            {
+                id: 15,
+                name: 'น้ำแข็ง',
+                category_id: 4,
+                category_name: 'อื่นๆ',
+                barcode: 'OTH007',
+                image_url: null,
+                stock: 50,
+                min_stock: 10,
+                is_active: true,
+                prices: [
+                    { id: 20, product_id: 15, price: 5, label: 'ถุงเล็ก', is_default: true, is_active: true },
+                    { id: 21, product_id: 15, price: 10, label: 'ถุงกลาง', is_default: false, is_active: true },
+                    { id: 22, product_id: 15, price: 20, label: 'ถุงใหญ่', is_default: false, is_active: true }
+                ]
+            }
+        ];
     }
     
     // Get all products with categories and prices
     async getProducts(options = {}) {
         try {
-            let query = this.supabase
-                .from('v_products_with_prices')
-                .select('*');
+            let filtered = [...this.products];
             
             // Apply filters
             if (options.categoryId) {
-                query = query.eq('category_id', options.categoryId);
+                filtered = filtered.filter(product => product.category_id == options.categoryId);
             }
             
             if (options.search) {
-                query = query.or(`name.ilike.%${options.search}%,barcode.ilike.%${options.search}%`);
+                const term = options.search.toLowerCase();
+                filtered = filtered.filter(product => 
+                    product.name.toLowerCase().includes(term) ||
+                    (product.barcode && product.barcode.toLowerCase().includes(term))
+                );
             }
             
             if (options.activeOnly !== false) {
-                query = query.eq('is_active', true);
+                filtered = filtered.filter(product => product.is_active);
             }
             
             // Apply sorting
             const sortBy = options.sortBy || 'name';
             const sortOrder = options.sortOrder || 'asc';
-            query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+            
+            filtered.sort((a, b) => {
+                let aVal = a[sortBy];
+                let bVal = b[sortBy];
+                
+                if (typeof aVal === 'string') {
+                    aVal = aVal.toLowerCase();
+                    bVal = bVal.toLowerCase();
+                }
+                
+                if (sortOrder === 'asc') {
+                    return aVal > bVal ? 1 : -1;
+                } else {
+                    return aVal < bVal ? 1 : -1;
+                }
+            });
             
             // Apply pagination
             if (options.limit) {
-                query = query.limit(options.limit);
+                const offset = options.offset || 0;
+                filtered = filtered.slice(offset, offset + options.limit);
             }
             
-            if (options.offset) {
-                query = query.range(options.offset, options.offset + (options.limit || CONFIG.ITEMS_PER_PAGE) - 1);
-            }
-            
-            const { data, error } = await query;
-            
-            if (error) throw error;
-            
-            // Parse prices JSON for each product
-            return (data || []).map(product => ({
-                ...product,
-                prices: product.prices ? JSON.parse(product.prices) : []
-            }));
+            return filtered;
             
         } catch (error) {
             console.error('Failed to get products:', error);
@@ -60,19 +306,16 @@ export class ProductService {
     // Get single product by ID
     async getProduct(productId) {
         try {
-            const { data, error } = await this.supabase
-                .from('products')
-                .select(`
-                    *,
-                    category:categories(id, name),
-                    prices:product_prices(*)
-                `)
-                .eq('id', productId)
-                .single();
+            const product = this.products.find(p => p.id === productId);
+            if (!product) {
+                throw new Error('ไม่พบสินค้า');
+            }
             
-            if (error) throw error;
-            
-            return data;
+            return {
+                ...product,
+                category: { id: product.category_id, name: product.category_name },
+                prices: product.prices || []
+            };
             
         } catch (error) {
             console.error('Failed to get product:', error);
@@ -83,20 +326,16 @@ export class ProductService {
     // Get product by barcode
     async getProductByBarcode(barcode) {
         try {
-            const { data, error } = await this.supabase
-                .from('products')
-                .select(`
-                    *,
-                    category:categories(id, name),
-                    prices:product_prices(*)
-                `)
-                .eq('barcode', barcode)
-                .eq('is_active', true)
-                .single();
+            const product = this.products.find(p => p.barcode === barcode && p.is_active);
+            if (!product) {
+                throw new Error('ไม่พบสินค้า');
+            }
             
-            if (error) throw error;
-            
-            return data;
+            return {
+                ...product,
+                category: { id: product.category_id, name: product.category_name },
+                prices: product.prices || []
+            };
             
         } catch (error) {
             console.error('Failed to get product by barcode:', error);
@@ -114,35 +353,39 @@ export class ProductService {
             
             // Check if barcode already exists (if provided)
             if (productData.barcode) {
-                const { data: existingProduct } = await this.supabase
-                    .from('products')
-                    .select('id')
-                    .eq('barcode', productData.barcode)
-                    .single();
-                
+                const existingProduct = this.products.find(p => p.barcode === productData.barcode);
                 if (existingProduct) {
                     throw new Error('บาร์โค้ดนี้มีอยู่แล้ว');
                 }
             }
             
+            // Find category
+            const category = this.categories.find(c => c.id == productData.category_id);
+            if (!category) {
+                throw new Error('ไม่พบหมวดหมู่ที่เลือก');
+            }
+            
+            // Generate new ID
+            const newId = Math.max(...this.products.map(p => p.id)) + 1;
+            
             // Create product
-            const { data, error } = await this.supabase
-                .from('products')
-                .insert([{
-                    name: productData.name.trim(),
-                    category_id: productData.category_id,
-                    barcode: productData.barcode || null,
-                    image_url: productData.image_url || null,
-                    stock: productData.stock || 0,
-                    min_stock: productData.min_stock || CONFIG.LOW_STOCK_THRESHOLD,
-                    is_active: true
-                }])
-                .select()
-                .single();
+            const newProduct = {
+                id: newId,
+                name: productData.name.trim(),
+                category_id: productData.category_id,
+                category_name: category.name,
+                barcode: productData.barcode || null,
+                image_url: productData.image_url || null,
+                stock: productData.stock || 0,
+                min_stock: productData.min_stock || CONFIG.LOW_STOCK_THRESHOLD,
+                is_active: true,
+                prices: []
+            };
             
-            if (error) throw error;
+            // Add to products array
+            this.products.push(newProduct);
             
-            return data;
+            return newProduct;
             
         } catch (error) {
             console.error('Failed to create product:', error);
@@ -153,30 +396,31 @@ export class ProductService {
     // Update product
     async updateProduct(productId, updates) {
         try {
+            const productIndex = this.products.findIndex(p => p.id === productId);
+            if (productIndex === -1) {
+                throw new Error('ไม่พบสินค้า');
+            }
+            
             // Check if barcode is being updated and already exists
             if (updates.barcode) {
-                const { data: existingProduct } = await this.supabase
-                    .from('products')
-                    .select('id')
-                    .eq('barcode', updates.barcode)
-                    .neq('id', productId)
-                    .single();
-                
+                const existingProduct = this.products.find(p => p.barcode === updates.barcode && p.id !== productId);
                 if (existingProduct) {
                     throw new Error('บาร์โค้ดนี้มีอยู่แล้ว');
                 }
             }
             
-            const { data, error } = await this.supabase
-                .from('products')
-                .update(updates)
-                .eq('id', productId)
-                .select()
-                .single();
+            // Update category name if category_id is changed
+            if (updates.category_id) {
+                const category = this.categories.find(c => c.id == updates.category_id);
+                if (category) {
+                    updates.category_name = category.name;
+                }
+            }
             
-            if (error) throw error;
+            // Update product
+            this.products[productIndex] = { ...this.products[productIndex], ...updates };
             
-            return data;
+            return this.products[productIndex];
             
         } catch (error) {
             console.error('Failed to update product:', error);
@@ -187,39 +431,16 @@ export class ProductService {
     // Update product stock
     async updateStock(productId, newStock, changeType = 'adjustment', referenceId = null, employeeId = null, notes = null) {
         try {
-            // Get current stock
-            const { data: product, error: fetchError } = await this.supabase
-                .from('products')
-                .select('stock')
-                .eq('id', productId)
-                .single();
+            const productIndex = this.products.findIndex(p => p.id === productId);
+            if (productIndex === -1) {
+                throw new Error('ไม่พบสินค้า');
+            }
             
-            if (fetchError) throw fetchError;
-            
-            const oldStock = product.stock;
+            const oldStock = this.products[productIndex].stock;
             const stockChange = newStock - oldStock;
             
             // Update product stock
-            const { error: updateError } = await this.supabase
-                .from('products')
-                .update({ stock: newStock })
-                .eq('id', productId);
-            
-            if (updateError) throw updateError;
-            
-            // Record stock history
-            if (employeeId) {
-                await this.recordStockHistory({
-                    product_id: productId,
-                    change_type: changeType,
-                    quantity_before: oldStock,
-                    quantity_change: stockChange,
-                    quantity_after: newStock,
-                    reference_id: referenceId,
-                    employee_id: employeeId,
-                    notes: notes
-                });
-            }
+            this.products[productIndex].stock = newStock;
             
             return { oldStock, newStock, stockChange };
             
@@ -229,107 +450,16 @@ export class ProductService {
         }
     }
     
-    // Record stock history
-    async recordStockHistory(historyData) {
-        try {
-            const { error } = await this.supabase
-                .from('stock_history')
-                .insert([historyData]);
-            
-            if (error) throw error;
-            
-        } catch (error) {
-            console.error('Failed to record stock history:', error);
-            throw error;
-        }
-    }
-    
-    // Get stock history for a product
-    async getStockHistory(productId, options = {}) {
-        try {
-            let query = this.supabase
-                .from('stock_history')
-                .select(`
-                    *,
-                    employee:employees(name),
-                    product:products(name)
-                `)
-                .eq('product_id', productId);
-            
-            // Apply date filter
-            if (options.startDate) {
-                query = query.gte('created_at', options.startDate);
-            }
-            
-            if (options.endDate) {
-                query = query.lte('created_at', options.endDate);
-            }
-            
-            // Apply change type filter
-            if (options.changeType) {
-                query = query.eq('change_type', options.changeType);
-            }
-            
-            // Sort by date (newest first)
-            query = query.order('created_at', { ascending: false });
-            
-            // Apply pagination
-            if (options.limit) {
-                query = query.limit(options.limit);
-            }
-            
-            const { data, error } = await query;
-            
-            if (error) throw error;
-            
-            return data || [];
-            
-        } catch (error) {
-            console.error('Failed to get stock history:', error);
-            throw error;
-        }
-    }
-    
-    // Get low stock products
-    async getLowStockProducts() {
-        try {
-            const { data, error } = await this.supabase
-                .from('products')
-                .select(`
-                    *,
-                    category:categories(name)
-                `)
-                .lte('stock', 'min_stock')
-                .eq('is_active', true)
-                .order('stock', { ascending: true });
-            
-            if (error) throw error;
-            
-            return data || [];
-            
-        } catch (error) {
-            console.error('Failed to get low stock products:', error);
-            throw error;
-        }
-    }
-    
     // Get categories
     async getCategories(activeOnly = true) {
         try {
-            let query = this.supabase
-                .from('categories')
-                .select('*')
-                .order('name');
+            let filtered = [...this.categories];
             
             if (activeOnly) {
-                query = query.eq('is_active', true);
+                filtered = filtered.filter(category => category.is_active);
             }
             
-            const { data, error } = await query;
-            
-            if (error) throw error;
-            
-            return data || [];
+            return filtered.sort((a, b) => a.name.localeCompare(b.name));
             
         } catch (error) {
             console.error('Failed to get categories:', error);
@@ -345,30 +475,25 @@ export class ProductService {
             }
             
             // Check if code already exists
-            const { data: existingCategory } = await this.supabase
-                .from('categories')
-                .select('id')
-                .eq('code', categoryData.code)
-                .single();
-            
+            const existingCategory = this.categories.find(c => c.code === categoryData.code);
             if (existingCategory) {
                 throw new Error('รหัสหมวดหมู่นี้มีอยู่แล้ว');
             }
             
-            const { data, error } = await this.supabase
-                .from('categories')
-                .insert([{
-                    code: categoryData.code.trim(),
-                    name: categoryData.name.trim(),
-                    description: categoryData.description || null,
-                    is_active: true
-                }])
-                .select()
-                .single();
+            // Generate new ID
+            const newId = Math.max(...this.categories.map(c => c.id)) + 1;
             
-            if (error) throw error;
+            const newCategory = {
+                id: newId,
+                code: categoryData.code.trim(),
+                name: categoryData.name.trim(),
+                description: categoryData.description || null,
+                is_active: true
+            };
             
-            return data;
+            this.categories.push(newCategory);
+            
+            return newCategory;
             
         } catch (error) {
             console.error('Failed to create category:', error);
@@ -379,17 +504,12 @@ export class ProductService {
     // Get product prices
     async getProductPrices(productId) {
         try {
-            const { data, error } = await this.supabase
-                .from('product_prices')
-                .select('*')
-                .eq('product_id', productId)
-                .eq('is_active', true)
-                .order('is_default', { ascending: false })
-                .order('price', { ascending: true });
+            const product = this.products.find(p => p.id === productId);
+            if (!product) {
+                throw new Error('ไม่พบสินค้า');
+            }
             
-            if (error) throw error;
-            
-            return data || [];
+            return product.prices || [];
             
         } catch (error) {
             console.error('Failed to get product prices:', error);
@@ -404,87 +524,37 @@ export class ProductService {
                 throw new Error('ข้อมูลราคาไม่ครบถ้วน');
             }
             
-            // If this is set as default, unset other default prices
-            if (priceData.is_default) {
-                await this.supabase
-                    .from('product_prices')
-                    .update({ is_default: false })
-                    .eq('product_id', priceData.product_id);
+            const productIndex = this.products.findIndex(p => p.id === priceData.product_id);
+            if (productIndex === -1) {
+                throw new Error('ไม่พบสินค้า');
             }
             
-            const { data, error } = await this.supabase
-                .from('product_prices')
-                .insert([{
-                    product_id: priceData.product_id,
-                    price: priceData.price,
-                    label: priceData.label.trim(),
-                    is_default: priceData.is_default || false,
-                    is_active: true
-                }])
-                .select()
-                .single();
+            // If this is set as default, unset other default prices
+            if (priceData.is_default) {
+                this.products[productIndex].prices.forEach(price => {
+                    price.is_default = false;
+                });
+            }
             
-            if (error) throw error;
+            // Generate new price ID
+            const allPrices = this.products.flatMap(p => p.prices || []);
+            const newPriceId = allPrices.length > 0 ? Math.max(...allPrices.map(p => p.id)) + 1 : 1;
             
-            return data;
+            const newPrice = {
+                id: newPriceId,
+                product_id: priceData.product_id,
+                price: priceData.price,
+                label: priceData.label.trim(),
+                is_default: priceData.is_default || false,
+                is_active: true
+            };
+            
+            this.products[productIndex].prices.push(newPrice);
+            
+            return newPrice;
             
         } catch (error) {
             console.error('Failed to add product price:', error);
-            throw error;
-        }
-    }
-    
-    // Update product price
-    async updateProductPrice(priceId, updates) {
-        try {
-            // If setting as default, unset other default prices for the same product
-            if (updates.is_default) {
-                const { data: price } = await this.supabase
-                    .from('product_prices')
-                    .select('product_id')
-                    .eq('id', priceId)
-                    .single();
-                
-                if (price) {
-                    await this.supabase
-                        .from('product_prices')
-                        .update({ is_default: false })
-                        .eq('product_id', price.product_id)
-                        .neq('id', priceId);
-                }
-            }
-            
-            const { data, error } = await this.supabase
-                .from('product_prices')
-                .update(updates)
-                .eq('id', priceId)
-                .select()
-                .single();
-            
-            if (error) throw error;
-            
-            return data;
-            
-        } catch (error) {
-            console.error('Failed to update product price:', error);
-            throw error;
-        }
-    }
-    
-    // Delete product price
-    async deleteProductPrice(priceId) {
-        try {
-            const { error } = await this.supabase
-                .from('product_prices')
-                .delete()
-                .eq('id', priceId);
-            
-            if (error) throw error;
-            
-            return true;
-            
-        } catch (error) {
-            console.error('Failed to delete product price:', error);
             throw error;
         }
     }
@@ -496,31 +566,11 @@ export class ProductService {
                 return [];
             }
             
-            const term = searchTerm.trim();
-            
-            let query = this.supabase
-                .from('v_products_with_prices')
-                .select('*')
-                .or(`name.ilike.%${term}%,barcode.ilike.%${term}%`)
-                .eq('is_active', true);
-            
-            if (options.categoryId) {
-                query = query.eq('category_id', options.categoryId);
-            }
-            
-            query = query
-                .order('name')
-                .limit(options.limit || 20);
-            
-            const { data, error } = await query;
-            
-            if (error) throw error;
-            
-            // Parse prices JSON for each product
-            return (data || []).map(product => ({
-                ...product,
-                prices: product.prices ? JSON.parse(product.prices) : []
-            }));
+            return await this.getProducts({
+                ...options,
+                search: searchTerm.trim(),
+                limit: options.limit || 20
+            });
             
         } catch (error) {
             console.error('Failed to search products:', error);

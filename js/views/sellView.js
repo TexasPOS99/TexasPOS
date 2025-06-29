@@ -1,15 +1,12 @@
-// Sell View
+// Sell View - Fixed for hardcoded data
 import { ProductService } from '../services/productService.js';
-import { SalesService } from '../services/salesService.js';
 import { AuthService } from '../services/authService.js';
 import { CONFIG } from '../config.js';
 
 export class SellView {
-    constructor(cartStore, toast, modal) {
+    constructor(toast, modal) {
         this.productService = new ProductService();
-        this.salesService = new SalesService();
         this.authService = new AuthService();
-        this.cartStore = cartStore;
         this.toast = toast;
         this.modal = modal;
         
@@ -18,6 +15,7 @@ export class SellView {
         this.currentCategory = 'all';
         this.searchTerm = '';
         this.isLoading = false;
+        this.cart = new Map(); // Simple cart implementation
         
         this.elements = {};
     }
@@ -100,6 +98,14 @@ export class SellView {
                 this.handleQuantityChange(e.target);
             }
         });
+        
+        // Checkout button
+        const checkoutFloat = document.getElementById('checkoutFloat');
+        if (checkoutFloat) {
+            checkoutFloat.addEventListener('click', () => {
+                this.showCheckoutModal();
+            });
+        }
     }
     
     // Debounced search
@@ -134,6 +140,7 @@ export class SellView {
             
             this.renderCategories();
             this.renderProducts();
+            this.updateCheckoutButton();
             
         } catch (error) {
             console.error('Failed to load initial data:', error);
@@ -359,15 +366,53 @@ export class SellView {
     
     async addToCart(product, price, quantity = 1) {
         try {
-            await this.cartStore.addItem(product, price, quantity);
-            // Toast will be shown by cart store event listener
+            const itemKey = `${product.id}_${price.id}`;
+            
+            if (this.cart.has(itemKey)) {
+                const existingItem = this.cart.get(itemKey);
+                const newQuantity = existingItem.quantity + quantity;
+                
+                if (newQuantity > product.stock) {
+                    this.toast.error('จำนวนเกินสต็อกที่มี');
+                    return;
+                }
+                
+                existingItem.quantity = newQuantity;
+                existingItem.subtotal = existingItem.price * newQuantity;
+            } else {
+                if (quantity > product.stock) {
+                    this.toast.error('จำนวนเกินสต็อกที่มี');
+                    return;
+                }
+                
+                const cartItem = {
+                    id: itemKey,
+                    product_id: product.id,
+                    name: product.name,
+                    price: price.price,
+                    price_label: price.label,
+                    price_id: price.id,
+                    quantity: quantity,
+                    subtotal: price.price * quantity,
+                    stock: product.stock
+                };
+                
+                this.cart.set(itemKey, cartItem);
+            }
+            
+            this.toast.success(`เพิ่ม ${product.name} ในตะกร้าแล้ว`);
+            this.updateCheckoutButton();
+            
         } catch (error) {
             this.toast.error(error.message);
         }
     }
     
     async showCheckoutModal() {
-        if (!this.elements.checkoutModal) return;
+        if (!this.elements.checkoutModal || this.cart.size === 0) {
+            this.toast.warning('ตะกร้าสินค้าว่างเปล่า');
+            return;
+        }
         
         this.renderCartItems();
         this.updateCheckoutTotal();
@@ -378,7 +423,7 @@ export class SellView {
     renderCartItems() {
         if (!this.elements.cartItems) return;
         
-        const items = this.cartStore.getItems();
+        const items = Array.from(this.cart.values());
         
         if (items.length === 0) {
             this.elements.cartItems.innerHTML = '<p>ไม่มีสินค้าในตะกร้า</p>';
@@ -406,31 +451,65 @@ export class SellView {
     updateCheckoutTotal() {
         if (!this.elements.checkoutTotal) return;
         
-        const total = this.cartStore.getTotalAmount();
+        const total = this.getTotalAmount();
         this.elements.checkoutTotal.textContent = this.formatCurrency(total);
+    }
+    
+    getTotalAmount() {
+        return Array.from(this.cart.values()).reduce((sum, item) => sum + item.subtotal, 0);
+    }
+    
+    getItemCount() {
+        return Array.from(this.cart.values()).reduce((sum, item) => sum + item.quantity, 0);
+    }
+    
+    updateCheckoutButton() {
+        const checkoutFloat = document.getElementById('checkoutFloat');
+        const cartCount = document.getElementById('cartCount');
+        const cartTotal = document.getElementById('cartTotal');
+        
+        if (!checkoutFloat || !cartCount || !cartTotal) return;
+        
+        const itemCount = this.getItemCount();
+        const totalAmount = this.getTotalAmount();
+        
+        if (itemCount > 0) {
+            checkoutFloat.classList.add('visible');
+            cartCount.textContent = itemCount;
+            cartTotal.textContent = this.formatCurrency(totalAmount);
+        } else {
+            checkoutFloat.classList.remove('visible');
+        }
     }
     
     handleQuantityChange(button) {
         const action = button.dataset.action;
         const itemId = button.dataset.itemId;
-        const item = this.cartStore.getItem(itemId);
+        const item = this.cart.get(itemId);
         
         if (!item) return;
         
         try {
             if (action === 'increase') {
-                this.cartStore.updateQuantity(itemId, item.quantity + 1);
+                if (item.quantity + 1 > item.stock) {
+                    this.toast.error('จำนวนเกินสต็อกที่มี');
+                    return;
+                }
+                item.quantity += 1;
+                item.subtotal = item.price * item.quantity;
             } else if (action === 'decrease') {
                 if (item.quantity > 1) {
-                    this.cartStore.updateQuantity(itemId, item.quantity - 1);
+                    item.quantity -= 1;
+                    item.subtotal = item.price * item.quantity;
                 } else {
-                    this.cartStore.removeItem(itemId);
+                    this.cart.delete(itemId);
                 }
             }
             
             // Update display
             this.renderCartItems();
             this.updateCheckoutTotal();
+            this.updateCheckoutButton();
             
         } catch (error) {
             this.toast.error(error.message);
@@ -463,7 +542,7 @@ export class SellView {
         if (!this.elements.cashReceived || !this.elements.changeAmount) return;
         
         const cashReceived = parseFloat(this.elements.cashReceived.value) || 0;
-        const total = this.cartStore.getTotalAmount();
+        const total = this.getTotalAmount();
         const change = cashReceived - total;
         
         this.elements.changeAmount.textContent = `เงินทอน: ${this.formatCurrency(Math.max(0, change))}`;
@@ -486,8 +565,8 @@ export class SellView {
             }
             
             const paymentMethod = selectedMethodBtn.dataset.method;
-            const items = this.cartStore.getItems();
-            const totalAmount = this.cartStore.getTotalAmount();
+            const items = Array.from(this.cart.values());
+            const totalAmount = this.getTotalAmount();
             
             if (items.length === 0) {
                 this.toast.error('ไม่มีสินค้าในตะกร้า');
@@ -511,37 +590,44 @@ export class SellView {
                 return;
             }
             
-            // Prepare sale data
-            const saleData = {
-                employee_id: currentUser.id,
-                items: items.map(item => ({
-                    product_id: item.product_id,
-                    name: item.name,
-                    price: item.price,
-                    price_label: item.price_label,
-                    quantity: item.quantity
-                })),
-                payment_method: paymentMethod,
-                cash_received: cashReceived
-            };
-            
             // Show loading
             const loadingToast = this.toast.loading('กำลังประมวลผลการขาย...');
             
-            // Process sale
-            const sale = await this.salesService.createSale(saleData);
+            // Simulate sale processing
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Generate sale number
+            const saleNumber = `S${Date.now()}`;
+            const changeAmount = paymentMethod === 'cash' ? cashReceived - totalAmount : 0;
+            
+            // Update stock
+            items.forEach(item => {
+                const product = this.products.find(p => p.id === item.product_id);
+                if (product) {
+                    product.stock -= item.quantity;
+                }
+            });
             
             // Success
             loadingToast.success('ขายสินค้าสำเร็จ!');
             
             // Clear cart
-            this.cartStore.clear();
+            this.cart.clear();
+            this.updateCheckoutButton();
             
             // Close modal
             this.modal.close();
             
             // Show sale summary
-            this.showSaleSummary(sale);
+            this.showSaleSummary({
+                sale_number: saleNumber,
+                total_amount: totalAmount,
+                payment_method: paymentMethod,
+                change_amount: changeAmount
+            });
+            
+            // Refresh products display
+            this.renderProducts();
             
         } catch (error) {
             console.error('Payment processing failed:', error);

@@ -1,14 +1,17 @@
-// Main Application Entry Point - Simplified
+// Main Application Entry Point - Updated with SellView integration
 import { CONFIG } from './config.js';
 import { ThemeManager } from './themeManager.js';
 import { AuthService } from './services/authService.js';
 import { Toast } from './components/toast.js';
 import { Spinner } from './components/spinner.js';
 import { Modal } from './components/modal.js';
+import { SellView } from './views/sellView.js';
+import { StockView } from './views/stockView.js';
 
 class App {
     constructor() {
         this.currentView = null;
+        this.views = new Map();
         this.isInitialized = false;
         
         // Initialize core components
@@ -45,6 +48,9 @@ class App {
             
             const user = this.authService.getCurrentUser();
             
+            // Initialize views
+            await this.initializeViews();
+            
             // Setup event listeners
             this.setupEventListeners();
             
@@ -66,6 +72,21 @@ class App {
             console.error('Failed to initialize app:', error);
             this.spinner.hide();
             this.toast.error('เกิดข้อผิดพลาดในการโหลดระบบ');
+        }
+    }
+    
+    async initializeViews() {
+        // Initialize views
+        this.views.set('sell', new SellView(this.toast, this.modal));
+        this.views.set('stock', new StockView(this.toast, this.modal));
+        
+        // Initialize each view
+        for (const [name, view] of this.views) {
+            try {
+                await view.init();
+            } catch (error) {
+                console.error(`Failed to initialize ${name} view:`, error);
+            }
         }
     }
     
@@ -175,6 +196,12 @@ class App {
             const targetView = document.getElementById(`${viewName}View`);
             if (targetView) {
                 targetView.classList.add('active');
+            }
+            
+            // Activate view controller
+            const viewController = this.views.get(viewName);
+            if (viewController && typeof viewController.activate === 'function') {
+                await viewController.activate();
             }
             
             this.currentView = viewName;
