@@ -1,12 +1,15 @@
 // Login View
 import { AuthService } from '../services/authService.js';
+import { EmployeeService } from '../services/employeeService.js';
 import { Toast } from '../components/toast.js';
 import { Spinner } from '../components/spinner.js';
 import { CONFIG } from '../config.js';
 
 export class LoginView {
     constructor() {
+        this.employeeService = new EmployeeService();
         this.authService = new AuthService();
+        this.authService.setEmployeeService(this.employeeService);
         this.toast = new Toast();
         this.spinner = new Spinner();
         
