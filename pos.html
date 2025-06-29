@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TexasPOS - ระบบขายหน้าร้าน</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/components/button.css">
+    <link rel="stylesheet" href="css/components/modal.css">
+    <link rel="stylesheet" href="css/components/spinner.css">
+    <link rel="stylesheet" href="css/components/toast.css">
+    <link rel="stylesheet" href="css/views/sellView.css">
+    <link rel="stylesheet" href="css/views/stockView.css">
+    <link rel="stylesheet" href="css/views/historyView.css">
+    <link rel="stylesheet" href="css/views/adminView.css">
+    <link rel="stylesheet" href="css/views/settingsView.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="pos-page">
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-mini">🏪</div>
+        </div>
+        
+        <div class="sidebar-menu">
+            <button class="menu-item active" data-view="sell" title="ขายของ">
+                <svg class="menu-icon" viewBox="0 0 24 24">
+                    <path d="M7 18C5.9 18 5 18.9 5 20S5.9 22 7 22 9 21.1 9 20 8.1 18 7 18ZM1 2V4H3L6.6 11.59L5.24 14.04C5.09 14.32 5 14.65 5 15C5 16.1 5.9 17 7 17H19V15H7.42C7.28 15 7.17 14.89 7.17 14.75L7.2 14.63L8.1 13H15.55C16.3 13 16.96 12.59 17.3 11.97L20.88 5H5.21L4.27 3H1ZM17 18C15.9 18 15 18.9 15 20S15.9 22 17 22 19 21.1 19 20 18.1 18 17 18Z"/>
+                </svg>
+                <span class="menu-text">ขายของ</span>
+            </button>
+            
+            <button class="menu-item" data-view="history" title="ประวัติการขาย">
+                <svg class="menu-icon" viewBox="0 0 24 24">
+                    <path d="M13,3A9,9 0 0,0 4,12H1L4.89,15.89L4.96,16.03L9,12H6A7,7 0 0,1 13,5A7,7 0 0,1 20,12A7,7 0 0,1 13,19C11.07,19 9.32,18.21 8.06,16.94L6.64,18.36C8.27,20 10.5,21 13,21A9,9 0 0,0 22,12A9,9 0 0,0 13,3Z"/>
+                </svg>
+                <span class="menu-text">ประวัติ</span>
+            </button>
+            
+            <button class="menu-item" data-view="stock" title="จัดการสินค้า">
+                <svg class="menu-icon" viewBox="0 0 24 24">
+                    <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6Z"/>
+                </svg>
+                <span class="menu-text">สินค้า</span>
+            </button>
+            
+            <button class="menu-item admin-only" data-view="add-product" title="เพิ่มสินค้า">
+                <svg class="menu-icon" viewBox="0 0 24 24">
+                    <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/>
+                </svg>
+                <span class="menu-text">เพิ่มสินค้า</span>
+            </button>
+            
+            <button class="menu-item" data-view="shift-summary" title="สรุปยอดกะ">
+                <svg class="menu-icon" viewBox="0 0 24 24">
+                    <path d="M3,3H21C21.53,3 22,3.47 22,4V20C22,20.53 21.53,21 21,21H3C2.47,21 2,20.53 2,20V4C2,3.47 2.47,3 3,3M12,6A3,3 0 0,0 9,9A3,3 0 0,0 12,12A3,3 0 0,0 15,9A3,3 0 0,0 12,6M6,17C6,15 10,13.9 12,13.9C14,13.9 18,15 18,17V18H6V17Z"/>
+                </svg>
+                <span class="menu-text">สรุปยอด</span>
+            </button>
+        </div>
+        
+        <div class="sidebar-footer">
+            <button class="menu-item" id="themeToggle" title="เปลี่ยนธีม">
+                <svg class="menu-icon" viewBox="0 0 24 24">
+                    <path d="M17.75,4.09L15.22,6.03L16.13,9.09L13.5,7.28L10.87,9.09L11.78,6.03L9.25,4.09L12.44,4L13.5,1L14.56,4L17.75,4.09M21.25,11L19.61,12.25L20.2,14.23L18.5,13.06L16.8,14.23L17.39,12.25L15.75,11L17.81,10.95L18.5,9L19.19,10.95L21.25,11M18.97,15.95C19.8,15.87 20.69,17.05 20.16,17.8C19.84,18.25 19.5,18.67 19.08,19.07C15.17,23 8.84,23 4.94,19.07C1.03,15.17 1.03,8.83 4.94,4.93C5.34,4.53 5.76,4.17 6.21,3.85C6.96,3.32 8.14,4.21 8.06,5.04C7.79,7.9 8.75,10.87 10.95,13.06C13.14,15.26 16.1,16.22 18.97,15.95M17.33,17.97C14.5,17.81 11.7,16.64 9.53,14.5C7.36,12.31 6.2,9.5 6.04,6.68C3.23,9.82 3.34,14.4 6.35,17.41C9.37,20.43 14,20.54 17.33,17.97Z"/>
+                </svg>
+                <span class="menu-text">ธีม</span>
+            </button>
+            
+            <button class="menu-item admin-only" data-view="settings" title="ตั้งค่า">
+                <svg class="menu-icon" viewBox="0 0 24 24">
+                    <path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.22,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.22,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
+                </svg>
+                <span class="menu-text">ตั้งค่า</span>
+            </button>
+            
+            <button class="menu-item logout-btn" id="logoutBtn" title="ออกจากระบบ">
+                <svg class="menu-icon" viewBox="0 0 24 24">
+                    <path d="M16,17V14H9V10H16V7L21,12L16,17M14,2A2,2 0 0,1 16,4V6H14V4H5V20H14V18H16V20A2,2 0 0,1 14,22H5A2,2 0 0,1 3,20V4A2,2 0 0,1 5,2H14Z"/>
+                </svg>
+                <span class="menu-text">ออกจากระบบ</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1 class="page-title" id="pageTitle">ขายของ</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <span class="user-name" id="userName">พนักงาน</span>
+                    <span class="user-role" id="userRole">employee</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Views Container -->
+        <div class="views-container">
+            <!-- Sell View -->
+            <div class="view active" id="sellView">
+                <div class="sell-container">
+                    <div class="products-section">
+                        <div class="search-bar">
+                            <input type="text" placeholder="ค้นหาสินค้า..." id="productSearch">
+                            <button class="search-btn">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div class="categories-filter">
+                            <button class="category-btn active" data-category="all">ทั้งหมด</button>
+                        </div>
+                        
+                        <div class="products-grid" id="productsGrid">
+                            <!-- Products will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History View -->
+            <div class="view" id="historyView">
+                <div class="history-container">
+                    <div class="history-filters">
+                        <input type="date" id="historyDate" class="date-input">
+                        <select id="historyShift" class="select-input">
+                            <option value="">ทุกกะ</option>
+                            <option value="morning">กะเช้า</option>
+                            <option value="afternoon">กะบ่าย</option>
+                            <option value="night">กะดึก</option>
+                        </select>
+                        <button class="btn-primary" id="searchHistory">ค้นหา</button>
+                    </div>
+                    
+                    <div class="history-list" id="historyList">
+                        <!-- History items will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stock View -->
+            <div class="view" id="stockView">
+                <div class="stock-container">
+                    <div class="stock-header">
+                        <div class="search-bar">
+                            <input type="text" placeholder="ค้นหาสินค้า..." id="stockSearch">
+                        </div>
+                    </div>
+                    
+                    <div class="stock-list" id="stockList">
+                        <!-- Stock items will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Product View (Admin Only) -->
+            <div class="view" id="addProductView">
+                <div class="add-product-container">
+                    <form class="add-product-form" id="addProductForm">
+                        <div class="form-group">
+                            <label>ชื่อสินค้า</label>
+                            <input type="text" name="name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>หมวดหมู่</label>
+                            <select name="category_id" required id="categorySelect">
+                                <!-- Categories will be loaded here -->
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>บาร์โค้ด</label>
+                            <input type="text" name="barcode">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>รูปภาพ URL</label>
+                            <input type="url" name="image_url">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>จำนวนเริ่มต้น</label>
+                            <input type="number" name="stock" value="0" min="0">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>สต็อกขั้นต่ำ</label>
+                            <input type="number" name="min_stock" value="10" min="0">
+                        </div>
+                        
+                        <button type="submit" class="btn-primary">เพิ่มสินค้า</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Shift Summary View -->
+            <div class="view" id="shiftSummaryView">
+                <div class="shift-summary-container">
+                    <div class="summary-cards">
+                        <div class="summary-card">
+                            <h3>ยอดขายรวม</h3>
+                            <div class="amount" id="totalSales">0 ฿</div>
+                        </div>
+                        
+                        <div class="summary-card">
+                            <h3>เงินสด</h3>
+                            <div class="amount" id="cashSales">0 ฿</div>
+                        </div>
+                        
+                        <div class="summary-card">
+                            <h3>โอน</h3>
+                            <div class="amount" id="transferSales">0 ฿</div>
+                        </div>
+                        
+                        <div class="summary-card">
+                            <h3>จำนวนออเดอร์</h3>
+                            <div class="amount" id="totalOrders">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings View (Admin Only) -->
+            <div class="view" id="settingsView">
+                <div class="settings-container">
+                    <div class="settings-section">
+                        <h3>จัดการพนักงาน</h3>
+                        <button class="btn-primary" id="addEmployeeBtn">เพิ่มพนักงานใหม่</button>
+                        <div class="employees-list" id="employeesList">
+                            <!-- Employees will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Floating Checkout Button -->
+    <div class="checkout-float" id="checkoutFloat">
+        <div class="checkout-info">
+            <span class="cart-count" id="cartCount">0</span>
+            <span class="checkout-text">ชำระเงิน</span>
+            <span class="cart-total" id="cartTotal">0 ฿</span>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="modalOverlay">
+        <!-- Price Selection Modal -->
+        <div class="modal price-modal" id="priceModal">
+            <div class="modal-header">
+                <h3>เลือกราคา</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="price-options" id="priceOptions">
+                    <!-- Price options will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Checkout Modal -->
+        <div class="modal checkout-modal" id="checkoutModal">
+            <div class="modal-header">
+                <h3>ชำระเงิน</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="cart-items" id="cartItems">
+                    <!-- Cart items will be loaded here -->
+                </div>
+                <div class="payment-section">
+                    <div class="total-amount">
+                        <span>ยอดรวม: </span>
+                        <span id="checkoutTotal">0 ฿</span>
+                    </div>
+                    <div class="payment-methods">
+                        <button class="payment-btn" data-method="cash">เงินสด</button>
+                        <button class="payment-btn" data-method="transfer">โอน</button>
+                    </div>
+                    <div class="cash-input" id="cashInput" style="display: none;">
+                        <input type="number" placeholder="จำนวนเงินที่รับ" id="cashReceived">
+                        <div class="change-amount" id="changeAmount">เงินทอน: 0 ฿</div>
+                    </div>
+                    <button class="btn-primary confirm-payment" id="confirmPayment">ยืนยันการชำระเงิน</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Employee Modal -->
+        <div class="modal employee-modal" id="employeeModal">
+            <div class="modal-header">
+                <h3>เพิ่มพนักงานใหม่</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="employeeForm">
+                    <div class="form-group">
+                        <label>ชื่อพนักงาน</label>
+                        <input type="text" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>รหัส PIN (4 หลัก)</label>
+                        <input type="text" name="pin" maxlength="4" pattern="[0-9]{4}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>ตำแหน่ง</label>
+                        <select name="role" required>
+                            <option value="employee">พนักงาน</option>
+                            <option value="admin">แอดมิน</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary">เพิ่มพนักงาน</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div class="spinner-overlay" id="loadingSpinner">
+        <div class="spinner-container">
+            <div class="futuristic-spinner"></div>
+            <p class="spinner-text">กำลังโหลด...</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">0%</div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script type="module" src="js/config.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
