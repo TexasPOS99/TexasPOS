@@ -16,15 +16,20 @@ export class AuthService {
                 throw new Error('รหัส PIN ต้องมี 4 หลัก');
             }
             
-            // Query employee by PIN
+            // Query employee by PIN - use maybeSingle() to handle no results gracefully
             const { data: employee, error } = await this.supabase
                 .from('employees')
                 .select('*')
                 .eq('pin', pin)
                 .eq('is_active', true)
-                .single();
+                .maybeSingle();
             
-            if (error || !employee) {
+            if (error) {
+                console.error('Database error:', error);
+                throw new Error('เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+            }
+            
+            if (!employee) {
                 throw new Error('รหัส PIN ไม่ถูกต้องหรือบัญชีถูกปิดใช้งาน');
             }
             
@@ -186,12 +191,12 @@ export class AuthService {
                 throw new Error('รหัส PIN ต้องมี 4 หลัก');
             }
             
-            // Check if PIN already exists
+            // Check if PIN already exists - use maybeSingle() for graceful handling
             const { data: existingEmployee } = await this.supabase
                 .from('employees')
                 .select('id')
                 .eq('pin', employeeData.pin)
-                .single();
+                .maybeSingle();
             
             if (existingEmployee) {
                 throw new Error('รหัส PIN นี้มีอยู่แล้ว');
@@ -313,13 +318,13 @@ export class AuthService {
                 }
             }
             
-            // Check if new PIN already exists
+            // Check if new PIN already exists - use maybeSingle() for graceful handling
             const { data: existingEmployee } = await this.supabase
                 .from('employees')
                 .select('id')
                 .eq('pin', newPin)
                 .neq('id', employeeId)
-                .single();
+                .maybeSingle();
             
             if (existingEmployee) {
                 throw new Error('รหัส PIN นี้มีอยู่แล้ว');

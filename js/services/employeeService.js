@@ -80,11 +80,14 @@ export class EmployeeService {
                 .select('*')
                 .eq('pin', pin)
                 .eq('is_active', true)
-                .single();
+                .maybeSingle();
             
-            if (error) throw error;
+            if (error) {
+                console.error('Database error:', error);
+                throw error;
+            }
             
-            return data;
+            return data; // Will be null if no employee found
             
         } catch (error) {
             console.error('Failed to get employee by PIN:', error);
@@ -110,8 +113,8 @@ export class EmployeeService {
                 throw new Error('ตำแหน่งไม่ถูกต้อง');
             }
             
-            // Check if PIN already exists
-            const existingEmployee = await this.getEmployeeByPin(employeeData.pin).catch(() => null);
+            // Check if PIN already exists - use maybeSingle() for graceful handling
+            const existingEmployee = await this.getEmployeeByPin(employeeData.pin);
             if (existingEmployee) {
                 throw new Error('รหัส PIN นี้มีอยู่แล้ว');
             }
@@ -189,13 +192,13 @@ export class EmployeeService {
                 throw new Error('รหัส PIN ต้องเป็นตัวเลข 4 หลัก');
             }
             
-            // Check if PIN already exists
+            // Check if PIN already exists - use maybeSingle() for graceful handling
             const { data: existingEmployee } = await this.supabase
                 .from('employees')
                 .select('id')
                 .eq('pin', newPin)
                 .neq('id', employeeId)
-                .single();
+                .maybeSingle();
             
             if (existingEmployee) {
                 throw new Error('รหัส PIN นี้มีอยู่แล้ว');
