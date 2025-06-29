@@ -1,12 +1,16 @@
 // Authentication Service
-import { createClient } from '@supabase/supabase-js';
 import { CONFIG } from '../config.js';
 
 export class AuthService {
     constructor() {
-        this.supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
         this.currentUser = null;
         this.sessionKey = CONFIG.STORAGE_KEYS.USER_SESSION;
+        this.employeeService = null; // Will be injected
+    }
+    
+    // Set employee service dependency
+    setEmployeeService(employeeService) {
+        this.employeeService = employeeService;
     }
     
     // Login with PIN
@@ -16,18 +20,13 @@ export class AuthService {
                 throw new Error('รหัส PIN ต้องมี 4 หลัก');
             }
             
-            // Query employee by PIN - use maybeSingle() to handle no results gracefully
-            const { data: employee, error } = await this.supabase
-                .from('employees')
-                .select('*')
-                .eq('pin', pin)
-                .eq('is_active', true)
-                .maybeSingle();
-            
-            if (error) {
-                console.error('Database error:', error);
-                throw new Error('เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+            if (!this.employeeService) {
+                throw new Error('EmployeeService not initialized');
             }
+            
+            // Get employee by PIN using EmployeeService
+            const employees = await this.employeeService.getEmployees();
+            const employee = employees.find(emp => emp.pin === pin && emp.is_active);
             
             if (!employee) {
                 throw new Error('รหัส PIN ไม่ถูกต้องหรือบัญชีถูกปิดใช้งาน');
@@ -153,21 +152,18 @@ export class AuthService {
         }
     }
     
-    // Get all employees (admin only)
+    // Get all employees (admin only) - delegate to EmployeeService
     async getEmployees() {
         try {
             if (!this.isAdmin()) {
                 throw new Error('ไม่มีสิทธิ์เข้าถึงข้อมูลพนักงาน');
             }
             
-            const { data, error } = await this.supabase
-                .from('employees')
-                .select('*')
-                .order('created_at', { ascending: false });
+            if (!this.employeeService) {
+                throw new Error('EmployeeService not initialized');
+            }
             
-            if (error) throw error;
-            
-            return data || [];
+            return await this.employeeService.getEmployees();
             
         } catch (error) {
             console.error('Failed to get employees:', error);
@@ -175,48 +171,18 @@ export class AuthService {
         }
     }
     
-    // Create new employee (admin only)
+    // Create new employee (admin only) - delegate to EmployeeService
     async createEmployee(employeeData) {
         try {
             if (!this.isAdmin()) {
                 throw new Error('ไม่มีสิทธิ์สร้างพนักงานใหม่');
             }
             
-            // Validate input
-            if (!employeeData.name || !employeeData.pin || !employeeData.role) {
-                throw new Error('ข้อมูลไม่ครบถ้วน');
+            if (!this.employeeService) {
+                throw new Error('EmployeeService not initialized');
             }
             
-            if (employeeData.pin.length !== CONFIG.VALIDATION.PIN_LENGTH) {
-                throw new Error('รหัส PIN ต้องมี 4 หลัก');
-            }
-            
-            // Check if PIN already exists - use maybeSingle() for graceful handling
-            const { data: existingEmployee } = await this.supabase
-                .from('employees')
-                .select('id')
-                .eq('pin', employeeData.pin)
-                .maybeSingle();
-            
-            if (existingEmployee) {
-                throw new Error('รหัส PIN นี้มีอยู่แล้ว');
-            }
-            
-            // Create employee
-            const { data, error } = await this.supabase
-                .from('employees')
-                .insert([{
-                    name: employeeData.name.trim(),
-                    pin: employeeData.pin,
-                    role: employeeData.role,
-                    is_active: true
-                }])
-                .select()
-                .single();
-            
-            if (error) throw error;
-            
-            return data;
+            return await this.employeeService.createEmployee(employeeData);
             
         } catch (error) {
             console.error('Failed to create employee:', error);
@@ -224,37 +190,18 @@ export class AuthService {
         }
     }
     
-    // Update employee (admin only)
+    // Update employee (admin only) - delegate to EmployeeService
     async updateEmployee(employeeId, updates) {
         try {
             if (!this.isAdmin()) {
                 throw new Error('ไม่มีสิทธิ์แก้ไขข้อมูลพนักงาน');
             }
             
-            // Don't allow updating PIN through this method for security
-            const allowedUpdates = {
-                name: updates.name,
-                role: updates.role,
-                is_active: updates.is_active
-            };
+            if (!this.employeeService) {
+                throw new Error('EmployeeService not initialized');
+            }
             
-            // Remove undefined values
-            Object.keys(allowedUpdates).forEach(key => {
-                if (allowedUpdates[key] === undefined) {
-                    delete allowedUpdates[key];
-                }
-            });
-            
-            const { data, error } = await this.supabase
-                .from('employees')
-                .update(allowedUpdates)
-                .eq('id', employeeId)
-                .select()
-                .single();
-            
-            if (error) throw error;
-            
-            return data;
+            return await this.employeeService.updateEmployee(employeeId, updates);
             
         } catch (error) {
             console.error('Failed to update employee:', error);
@@ -262,33 +209,18 @@ export class AuthService {
         }
     }
     
-    // Toggle employee active status (admin only)
+    // Toggle employee active status (admin only) - delegate to EmployeeService
     async toggleEmployeeStatus(employeeId) {
         try {
             if (!this.isAdmin()) {
                 throw new Error('ไม่มีสิทธิ์เปลี่ยนสถานะพนักงาน');
             }
             
-            // Get current status
-            const { data: employee, error: fetchError } = await this.supabase
-                .from('employees')
-                .select('is_active')
-                .eq('id', employeeId)
-                .single();
+            if (!this.employeeService) {
+                throw new Error('EmployeeService not initialized');
+            }
             
-            if (fetchError) throw fetchError;
-            
-            // Toggle status
-            const { data, error } = await this.supabase
-                .from('employees')
-                .update({ is_active: !employee.is_active })
-                .eq('id', employeeId)
-                .select()
-                .single();
-            
-            if (error) throw error;
-            
-            return data;
+            return await this.employeeService.toggleEmployeeStatus(employeeId);
             
         } catch (error) {
             console.error('Failed to toggle employee status:', error);
@@ -296,7 +228,7 @@ export class AuthService {
         }
     }
     
-    // Change PIN (self or admin)
+    // Change PIN (self or admin) - delegate to EmployeeService
     async changePin(employeeId, newPin, currentPin = null) {
         try {
             const currentUser = this.getCurrentUser();
@@ -318,27 +250,11 @@ export class AuthService {
                 }
             }
             
-            // Check if new PIN already exists - use maybeSingle() for graceful handling
-            const { data: existingEmployee } = await this.supabase
-                .from('employees')
-                .select('id')
-                .eq('pin', newPin)
-                .neq('id', employeeId)
-                .maybeSingle();
-            
-            if (existingEmployee) {
-                throw new Error('รหัส PIN นี้มีอยู่แล้ว');
+            if (!this.employeeService) {
+                throw new Error('EmployeeService not initialized');
             }
             
-            // Update PIN
-            const { data, error } = await this.supabase
-                .from('employees')
-                .update({ pin: newPin })
-                .eq('id', employeeId)
-                .select()
-                .single();
-            
-            if (error) throw error;
+            const data = await this.employeeService.changePin(employeeId, newPin, currentPin);
             
             // If changing own PIN, update session
             if (currentUser.id === employeeId) {
