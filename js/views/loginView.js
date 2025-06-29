@@ -1,8 +1,7 @@
-// Login View - Simplified
+// Login View - Enhanced for mobile touch
 import { AuthService } from '../services/authService.js';
 import { Toast } from '../components/toast.js';
 import { Spinner } from '../components/spinner.js';
-import { CONFIG } from '../config.js';
 
 export class LoginView {
     constructor() {
@@ -21,6 +20,7 @@ export class LoginView {
         this.setupElements();
         this.setupEventListeners();
         this.checkExistingSession();
+        this.initializeFeatures();
     }
     
     setupElements() {
@@ -30,24 +30,71 @@ export class LoginView {
     }
     
     setupEventListeners() {
-        // Keypad button clicks
+        // Enhanced keypad button handling for mobile
         this.keypadButtons.forEach(button => {
+            // Mouse events
             button.addEventListener('click', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 const number = button.dataset.number;
                 this.addDigit(number);
             });
+            
+            // Touch events for better mobile experience
+            button.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                button.classList.add('touching');
+            }, { passive: false });
+            
+            button.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                button.classList.remove('touching');
+                
+                const number = button.dataset.number;
+                this.addDigit(number);
+            }, { passive: false });
+            
+            button.addEventListener('touchcancel', (e) => {
+                button.classList.remove('touching');
+            });
+            
+            // Prevent context menu on long press
+            button.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
         });
         
-        // Delete button
+        // Enhanced delete button handling
         if (this.deleteButton) {
             this.deleteButton.addEventListener('click', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 this.removeDigit();
+            });
+            
+            this.deleteButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.deleteButton.classList.add('touching');
+            }, { passive: false });
+            
+            this.deleteButton.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.deleteButton.classList.remove('touching');
+                this.removeDigit();
+            }, { passive: false });
+            
+            this.deleteButton.addEventListener('touchcancel', (e) => {
+                this.deleteButton.classList.remove('touching');
+            });
+            
+            this.deleteButton.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
             });
         }
         
-        // Keyboard input
+        // Keyboard input (for desktop)
         document.addEventListener('keydown', (e) => {
             this.handleKeyboardInput(e);
         });
@@ -56,6 +103,22 @@ export class LoginView {
         document.addEventListener('submit', (e) => {
             e.preventDefault();
         });
+        
+        // Prevent zoom on double tap
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
     }
     
     handleKeyboardInput(e) {
@@ -91,6 +154,7 @@ export class LoginView {
         this.pin += digit;
         this.updatePinDisplay();
         this.addRippleEffect();
+        this.provideFeedback();
         
         // Auto-login when PIN is complete
         if (this.pin.length === this.maxPinLength) {
@@ -107,6 +171,7 @@ export class LoginView {
         
         this.pin = this.pin.slice(0, -1);
         this.updatePinDisplay();
+        this.provideFeedback();
     }
     
     clearPin() {
@@ -137,6 +202,34 @@ export class LoginView {
         }
     }
     
+    provideFeedback() {
+        // Haptic feedback for mobile devices
+        if ('vibrate' in navigator) {
+            navigator.vibrate(50);
+        }
+        
+        // Audio feedback (optional)
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        } catch (error) {
+            // Audio feedback not available, continue silently
+        }
+    }
+    
     showErrorState() {
         this.pinDots.forEach(dot => {
             dot.classList.add('error');
@@ -149,6 +242,11 @@ export class LoginView {
             setTimeout(() => {
                 pinDisplay.style.animation = '';
             }, 500);
+        }
+        
+        // Error haptic feedback
+        if ('vibrate' in navigator) {
+            navigator.vibrate([100, 50, 100]);
         }
     }
     
@@ -187,6 +285,11 @@ export class LoginView {
             
             this.spinner.setProgress(100, 'เข้าสู่ระบบสำเร็จ!');
             
+            // Success haptic feedback
+            if ('vibrate' in navigator) {
+                navigator.vibrate([50, 50, 50]);
+            }
+            
             // Wait a bit before redirect
             await new Promise(resolve => setTimeout(resolve, 500));
             
@@ -223,14 +326,28 @@ export class LoginView {
     // Add visual feedback for keypad buttons
     addKeypadFeedback() {
         this.keypadButtons.forEach(button => {
-            button.addEventListener('touchstart', () => {
+            // Enhanced touch feedback
+            button.addEventListener('touchstart', (e) => {
                 button.style.transform = 'scale(0.95)';
-            });
+                button.style.background = 'var(--accent-primary)';
+                button.style.color = 'var(--bg-primary)';
+            }, { passive: true });
             
-            button.addEventListener('touchend', () => {
+            button.addEventListener('touchend', (e) => {
+                setTimeout(() => {
+                    button.style.transform = '';
+                    button.style.background = '';
+                    button.style.color = '';
+                }, 100);
+            }, { passive: true });
+            
+            button.addEventListener('touchcancel', (e) => {
                 button.style.transform = '';
-            });
+                button.style.background = '';
+                button.style.color = '';
+            }, { passive: true });
             
+            // Mouse feedback for desktop
             button.addEventListener('mousedown', () => {
                 button.style.transform = 'scale(0.95)';
             });
@@ -246,13 +363,25 @@ export class LoginView {
         
         // Delete button feedback
         if (this.deleteButton) {
-            this.deleteButton.addEventListener('touchstart', () => {
+            this.deleteButton.addEventListener('touchstart', (e) => {
                 this.deleteButton.style.transform = 'scale(0.95)';
-            });
+                this.deleteButton.style.background = 'var(--error)';
+                this.deleteButton.style.color = 'white';
+            }, { passive: true });
             
-            this.deleteButton.addEventListener('touchend', () => {
+            this.deleteButton.addEventListener('touchend', (e) => {
+                setTimeout(() => {
+                    this.deleteButton.style.transform = '';
+                    this.deleteButton.style.background = '';
+                    this.deleteButton.style.color = '';
+                }, 100);
+            }, { passive: true });
+            
+            this.deleteButton.addEventListener('touchcancel', (e) => {
                 this.deleteButton.style.transform = '';
-            });
+                this.deleteButton.style.background = '';
+                this.deleteButton.style.color = '';
+            }, { passive: true });
             
             this.deleteButton.addEventListener('mousedown', () => {
                 this.deleteButton.style.transform = 'scale(0.95)';
@@ -268,9 +397,41 @@ export class LoginView {
         }
     }
     
+    // Prevent viewport zoom on mobile
+    preventZoom() {
+        // Add viewport meta tag if not present
+        let viewport = document.querySelector('meta[name="viewport"]');
+        if (!viewport) {
+            viewport = document.createElement('meta');
+            viewport.name = 'viewport';
+            document.head.appendChild(viewport);
+        }
+        
+        viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+        
+        // Prevent pinch zoom
+        document.addEventListener('gesturestart', (e) => {
+            e.preventDefault();
+        });
+        
+        document.addEventListener('gesturechange', (e) => {
+            e.preventDefault();
+        });
+        
+        document.addEventListener('gestureend', (e) => {
+            e.preventDefault();
+        });
+    }
+    
     // Initialize all features
     initializeFeatures() {
         this.addKeypadFeedback();
+        this.preventZoom();
+        
+        // Add CSS class for touch devices
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+            document.body.classList.add('touch-device');
+        }
     }
     
     // Destroy view
@@ -283,10 +444,9 @@ export class LoginView {
 // Initialize login view when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     const loginView = new LoginView();
-    loginView.initializeFeatures();
     
     // Make globally available for debugging
-    if (CONFIG.DEBUG) {
+    if (window.CONFIG && window.CONFIG.DEBUG) {
         window.loginView = loginView;
     }
 });
