@@ -25,8 +25,7 @@ export class AuthService {
             }
             
             // Get employee by PIN using EmployeeService
-            const employees = await this.employeeService.getEmployees();
-            const employee = employees.find(emp => emp.pin === pin && emp.is_active);
+            const employee = await this.employeeService.getEmployeeByPin(pin);
             
             if (!employee) {
                 throw new Error('รหัส PIN ไม่ถูกต้องหรือบัญชีถูกปิดใช้งาน');
