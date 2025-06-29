@@ -4,8 +4,11 @@ import { CONFIG } from '../config.js';
 export class AuthService {
     constructor() {
         this.currentUser = null;
-        this.sessionKey = CONFIG.STORAGE_KEYS.USER_SESSION;
-        this.employeeService = null; // Will be injected
+        this.employeeService = null;
+        this.sessionKey = 'pos_session';
+        this.sessionTimeout = CONFIG.SESSION_TIMEOUT || 8 * 60 * 60 * 1000; // 8 hours default
+        
+        this.loadSession();
     }
     
     // Set employee service dependency
@@ -16,36 +19,31 @@ export class AuthService {
     // Login with PIN
     async loginWithPin(pin) {
         try {
-            if (!pin || pin.length !== CONFIG.VALIDATION.PIN_LENGTH) {
-                throw new Error('รหัส PIN ต้องมี 4 หลัก');
-            }
-            
             if (!this.employeeService) {
-                throw new Error('EmployeeService not initialized');
+                throw new Error('Employee service not initialized');
             }
             
-            // Get employee by PIN using EmployeeService
-            const employee = await this.employeeService.getEmployeeByPin(pin);
-            
-            if (!employee) {
-                throw new Error('รหัส PIN ไม่ถูกต้องหรือบัญชีถูกปิดใช้งาน');
+            // Validate PIN format
+            if (!pin || pin.length !== CONFIG.VALIDATION.PIN_LENGTH || !/^\d+$/.test(pin)) {
+                throw new Error('รหัส PIN ไม่ถูกต้อง');
             }
+            
+            // Get employee by PIN (includes active check)
+            const employee = await this.employeeService.getEmployeeByPinForLogin(pin);
             
             // Create session
-            const session = {
+            this.currentUser = {
                 id: employee.id,
                 name: employee.name,
-                role: employee.role,
                 pin: employee.pin,
-                loginTime: new Date().toISOString(),
-                lastActivity: new Date().toISOString()
+                role: employee.role,
+                loginTime: new Date().toISOString()
             };
             
             // Save session
-            this.currentUser = session;
-            this.saveSession(session);
+            this.saveSession();
             
-            return session;
+            return this.currentUser;
             
         } catch (error) {
             console.error('Login failed:', error);
@@ -53,81 +51,60 @@ export class AuthService {
         }
     }
     
-    // Get current user from session
-    getCurrentUser() {
-        if (this.currentUser) {
-            return this.currentUser;
-        }
-        
-        // Try to load from localStorage
-        const savedSession = this.loadSession();
-        if (savedSession && this.isSessionValid(savedSession)) {
-            this.currentUser = savedSession;
-            return savedSession;
-        }
-        
-        return null;
+    // Logout
+    logout() {
+        this.currentUser = null;
+        this.clearSession();
     }
     
-    // Check if user is authenticated
-    isAuthenticated() {
-        const user = this.getCurrentUser();
-        return user !== null;
+    // Get current user
+    getCurrentUser() {
+        return this.currentUser;
+    }
+    
+    // Check if user is logged in
+    isLoggedIn() {
+        return this.currentUser !== null;
     }
     
     // Check if user is admin
     isAdmin() {
-        const user = this.getCurrentUser();
-        return user && user.role === 'admin';
-    }
-    
-    // Logout
-    async logout() {
-        try {
-            // Clear current user
-            this.currentUser = null;
-            
-            // Clear session storage
-            this.clearSession();
-            
-            return true;
-            
-        } catch (error) {
-            console.error('Logout failed:', error);
-            throw error;
-        }
-    }
-    
-    // Update last activity
-    updateLastActivity() {
-        if (this.currentUser) {
-            this.currentUser.lastActivity = new Date().toISOString();
-            this.saveSession(this.currentUser);
-        }
+        return this.currentUser && this.currentUser.role === 'admin';
     }
     
     // Check if session is valid
-    isSessionValid(session) {
-        if (!session || !session.loginTime) {
+    isSessionValid() {
+        if (!this.currentUser || !this.currentUser.loginTime) {
             return false;
         }
         
-        const loginTime = new Date(session.loginTime);
+        const loginTime = new Date(this.currentUser.loginTime);
         const now = new Date();
         const timeDiff = now.getTime() - loginTime.getTime();
         
-        // Check if session has expired (default: 8 hours)
-        const maxSessionTime = CONFIG.AUTO_LOGOUT_TIME || 8 * 60 * 60 * 1000;
-        
-        return timeDiff < maxSessionTime;
+        return timeDiff < this.sessionTimeout;
+    }
+    
+    // Refresh session
+    refreshSession() {
+        if (this.currentUser) {
+            this.currentUser.loginTime = new Date().toISOString();
+            this.saveSession();
+        }
     }
     
     // Save session to localStorage
-    saveSession(session) {
-        try {
-            localStorage.setItem(this.sessionKey, JSON.stringify(session));
-        } catch (error) {
-            console.error('Failed to save session:', error);
+    saveSession() {
+        if (this.currentUser) {
+            try {
+                const sessionData = {
+                    user: this.currentUser,
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem(this.sessionKey, JSON.stringify(sessionData));
+            } catch (error) {
+                console.error('Failed to save session:', error);
+            }
         }
     }
     
@@ -135,11 +112,28 @@ export class AuthService {
     loadSession() {
         try {
             const sessionData = localStorage.getItem(this.sessionKey);
-            return sessionData ? JSON.parse(sessionData) : null;
+            if (sessionData) {
+                const parsed = JSON.parse(sessionData);
+                
+                // Check if session is still valid
+                if (parsed.user && parsed.timestamp) {
+                    const sessionTime = new Date(parsed.timestamp);
+                    const now = new Date();
+                    const timeDiff = now.getTime() - sessionTime.getTime();
+                    
+                    if (timeDiff < this.sessionTimeout) {
+                        this.currentUser = parsed.user;
+                        return true;
+                    }
+                }
+            }
         } catch (error) {
             console.error('Failed to load session:', error);
-            return null;
         }
+        
+        // Clear invalid session
+        this.clearSession();
+        return false;
     }
     
     // Clear session from localStorage
@@ -151,117 +145,138 @@ export class AuthService {
         }
     }
     
-    // Get all employees (admin only) - delegate to EmployeeService
-    async getEmployees() {
-        try {
-            if (!this.isAdmin()) {
-                throw new Error('ไม่มีสิทธิ์เข้าถึงข้อมูลพนักงาน');
+    // Auto-logout on session timeout
+    startSessionTimer() {
+        // Clear existing timer
+        if (this.sessionTimer) {
+            clearTimeout(this.sessionTimer);
+        }
+        
+        // Set new timer
+        this.sessionTimer = setTimeout(() => {
+            this.logout();
+            
+            // Redirect to login if not already there
+            if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+                window.location.href = '/';
             }
-            
-            if (!this.employeeService) {
-                throw new Error('EmployeeService not initialized');
-            }
-            
-            return await this.employeeService.getEmployees();
-            
-        } catch (error) {
-            console.error('Failed to get employees:', error);
-            throw error;
+        }, this.sessionTimeout);
+    }
+    
+    // Stop session timer
+    stopSessionTimer() {
+        if (this.sessionTimer) {
+            clearTimeout(this.sessionTimer);
+            this.sessionTimer = null;
         }
     }
     
-    // Create new employee (admin only) - delegate to EmployeeService
-    async createEmployee(employeeData) {
-        try {
-            if (!this.isAdmin()) {
-                throw new Error('ไม่มีสิทธิ์สร้างพนักงานใหม่');
-            }
-            
-            if (!this.employeeService) {
-                throw new Error('EmployeeService not initialized');
-            }
-            
-            return await this.employeeService.createEmployee(employeeData);
-            
-        } catch (error) {
-            console.error('Failed to create employee:', error);
-            throw error;
+    // Handle user activity (reset session timer)
+    handleUserActivity() {
+        if (this.isLoggedIn() && this.isSessionValid()) {
+            this.refreshSession();
+            this.startSessionTimer();
         }
     }
     
-    // Update employee (admin only) - delegate to EmployeeService
-    async updateEmployee(employeeId, updates) {
-        try {
-            if (!this.isAdmin()) {
-                throw new Error('ไม่มีสิทธิ์แก้ไขข้อมูลพนักงาน');
-            }
-            
-            if (!this.employeeService) {
-                throw new Error('EmployeeService not initialized');
-            }
-            
-            return await this.employeeService.updateEmployee(employeeId, updates);
-            
-        } catch (error) {
-            console.error('Failed to update employee:', error);
-            throw error;
-        }
+    // Initialize activity tracking
+    initActivityTracking() {
+        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+        
+        events.forEach(event => {
+            document.addEventListener(event, () => {
+                this.handleUserActivity();
+            }, { passive: true });
+        });
     }
     
-    // Toggle employee active status (admin only) - delegate to EmployeeService
-    async toggleEmployeeStatus(employeeId) {
-        try {
-            if (!this.isAdmin()) {
-                throw new Error('ไม่มีสิทธิ์เปลี่ยนสถานะพนักงาน');
-            }
-            
-            if (!this.employeeService) {
-                throw new Error('EmployeeService not initialized');
-            }
-            
-            return await this.employeeService.toggleEmployeeStatus(employeeId);
-            
-        } catch (error) {
-            console.error('Failed to toggle employee status:', error);
-            throw error;
+    // Validate current session
+    async validateSession() {
+        if (!this.isLoggedIn() || !this.isSessionValid()) {
+            this.logout();
+            return false;
         }
+        
+        // Optionally verify with server that user still exists and is active
+        if (this.employeeService && this.currentUser) {
+            try {
+                const employee = await this.employeeService.getEmployee(this.currentUser.id);
+                
+                if (!employee || !employee.is_active) {
+                    this.logout();
+                    return false;
+                }
+                
+                // Update user data if needed
+                if (employee.name !== this.currentUser.name || employee.role !== this.currentUser.role) {
+                    this.currentUser.name = employee.name;
+                    this.currentUser.role = employee.role;
+                    this.saveSession();
+                }
+                
+            } catch (error) {
+                console.error('Session validation failed:', error);
+                this.logout();
+                return false;
+            }
+        }
+        
+        return true;
     }
     
-    // Change PIN (self or admin) - delegate to EmployeeService
-    async changePin(employeeId, newPin, currentPin = null) {
+    // Get session info
+    getSessionInfo() {
+        if (!this.currentUser) {
+            return null;
+        }
+        
+        const loginTime = new Date(this.currentUser.loginTime);
+        const now = new Date();
+        const sessionDuration = now.getTime() - loginTime.getTime();
+        const remainingTime = this.sessionTimeout - sessionDuration;
+        
+        return {
+            user: this.currentUser,
+            loginTime: loginTime,
+            sessionDuration: sessionDuration,
+            remainingTime: Math.max(0, remainingTime),
+            isValid: this.isSessionValid()
+        };
+    }
+    
+    // Change user PIN
+    async changePin(currentPin, newPin) {
         try {
-            const currentUser = this.getCurrentUser();
+            if (!this.currentUser) {
+                throw new Error('ไม่พบข้อมูลผู้ใช้');
+            }
             
-            // Check permissions
-            if (currentUser.id !== employeeId && !this.isAdmin()) {
-                throw new Error('ไม่มีสิทธิ์เปลี่ยนรหัส PIN');
+            // Verify current PIN
+            if (this.currentUser.pin !== currentPin) {
+                throw new Error('รหัส PIN ปัจจุบันไม่ถูกต้อง');
             }
             
             // Validate new PIN
-            if (!newPin || newPin.length !== CONFIG.VALIDATION.PIN_LENGTH) {
-                throw new Error('รหัส PIN ใหม่ต้องมี 4 หลัก');
+            if (!newPin || newPin.length !== CONFIG.VALIDATION.PIN_LENGTH || !/^\d+$/.test(newPin)) {
+                throw new Error('รหัส PIN ใหม่ต้องเป็นตัวเลข 4 หลัก');
             }
             
-            // If changing own PIN, verify current PIN
-            if (currentUser.id === employeeId && currentPin) {
-                if (currentPin !== currentUser.pin) {
-                    throw new Error('รหัส PIN ปัจจุบันไม่ถูกต้อง');
-                }
+            if (currentPin === newPin) {
+                throw new Error('รหัส PIN ใหม่ต้องแตกต่างจากรหัสเดิม');
             }
             
+            // Update PIN via employee service
             if (!this.employeeService) {
-                throw new Error('EmployeeService not initialized');
+                throw new Error('Employee service not initialized');
             }
             
-            const data = await this.employeeService.changePin(employeeId, newPin, currentPin);
+            const updatedEmployee = await this.employeeService.changeEmployeePin(this.currentUser.id, newPin);
             
-            // If changing own PIN, update session
-            if (currentUser.id === employeeId) {
-                currentUser.pin = newPin;
-                this.saveSession(currentUser);
-            }
+            // Update current user session
+            this.currentUser.pin = newPin;
+            this.saveSession();
             
-            return data;
+            return updatedEmployee;
             
         } catch (error) {
             console.error('Failed to change PIN:', error);
@@ -269,29 +284,24 @@ export class AuthService {
         }
     }
     
-    // Auto-logout on inactivity
-    setupAutoLogout() {
-        let inactivityTimer;
+    // Initialize auth service
+    init() {
+        // Start session timer if logged in
+        if (this.isLoggedIn()) {
+            this.startSessionTimer();
+        }
         
-        const resetTimer = () => {
-            clearTimeout(inactivityTimer);
-            this.updateLastActivity();
-            
-            inactivityTimer = setTimeout(() => {
-                this.logout();
-                window.location.href = '/';
-            }, CONFIG.AUTO_LOGOUT_TIME);
-        };
+        // Initialize activity tracking
+        this.initActivityTracking();
         
-        // Events that reset the timer
-        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-        
-        events.forEach(event => {
-            document.addEventListener(event, resetTimer, true);
-        });
-        
-        // Initial timer setup
-        resetTimer();
+        // Validate session on page load
+        this.validateSession();
+    }
+    
+    // Cleanup
+    destroy() {
+        this.stopSessionTimer();
+        this.clearSession();
     }
 }
 

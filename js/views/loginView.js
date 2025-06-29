@@ -24,6 +24,7 @@ export class LoginView {
         this.setupElements();
         this.setupEventListeners();
         this.checkExistingSession();
+        this.ensureSystemAccess();
     }
     
     setupElements() {
@@ -206,7 +207,7 @@ export class LoginView {
             // Show error state
             this.showErrorState();
             
-            // Show error toast
+            // Show error toast with more specific message
             this.toast.error(error.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
             
             // Clear PIN after error
@@ -222,6 +223,17 @@ export class LoginView {
         if (currentUser) {
             // Redirect to POS if already logged in
             window.location.href = '/pos.html';
+        }
+    }
+    
+    // Ensure system access by checking for active admin
+    async ensureSystemAccess() {
+        try {
+            // Ensure at least one admin is active
+            await this.employeeService.ensureActiveAdmin();
+        } catch (error) {
+            console.error('Failed to ensure system access:', error);
+            // Don't show error to user as this is a background operation
         }
     }
     

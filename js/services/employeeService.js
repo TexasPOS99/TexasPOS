@@ -79,7 +79,6 @@ export class EmployeeService {
                 .from('employees')
                 .select('*')
                 .eq('pin', pin)
-                .eq('is_active', true)
                 .maybeSingle();
             
             if (error) {
@@ -91,6 +90,27 @@ export class EmployeeService {
             
         } catch (error) {
             console.error('Failed to get employee by PIN:', error);
+            throw error;
+        }
+    }
+    
+    // Get employee by PIN for login (includes inactive check)
+    async getEmployeeByPinForLogin(pin) {
+        try {
+            const employee = await this.getEmployeeByPin(pin);
+            
+            if (!employee) {
+                throw new Error('รหัส PIN ไม่ถูกต้อง');
+            }
+            
+            if (!employee.is_active) {
+                throw new Error('บัญชีของคุณถูกปิดใช้งาน กรุณาติดต่อผู้ดูแลระบบ');
+            }
+            
+            return employee;
+            
+        } catch (error) {
+            console.error('Failed to get employee by PIN for login:', error);
             throw error;
         }
     }
@@ -225,8 +245,23 @@ export class EmployeeService {
     // Toggle employee active status
     async toggleEmployeeStatus(employeeId) {
         try {
-            // Get current status
+            // Get current employee
             const employee = await this.getEmployee(employeeId);
+            
+            // Check if this is the last active admin
+            if (employee.role === 'admin' && employee.is_active) {
+                const { data: activeAdmins, error } = await this.supabase
+                    .from('employees')
+                    .select('id')
+                    .eq('role', 'admin')
+                    .eq('is_active', true);
+                
+                if (error) throw error;
+                
+                if (activeAdmins.length <= 1) {
+                    throw new Error('ไม่สามารถปิดใช้งานผู้ดูแลระบบคนสุดท้ายได้');
+                }
+            }
             
             // Toggle status
             const { data, error } = await this.supabase
@@ -251,6 +286,21 @@ export class EmployeeService {
         try {
             // Get employee data for history
             const employee = await this.getEmployee(employeeId);
+            
+            // Check if this is the last active admin
+            if (employee.role === 'admin' && employee.is_active) {
+                const { data: activeAdmins, error } = await this.supabase
+                    .from('employees')
+                    .select('id')
+                    .eq('role', 'admin')
+                    .eq('is_active', true);
+                
+                if (error) throw error;
+                
+                if (activeAdmins.length <= 1) {
+                    throw new Error('ไม่สามารถลบผู้ดูแลระบบคนสุดท้ายได้');
+                }
+            }
             
             // Record deletion in history
             const { error: historyError } = await this.supabase
@@ -279,6 +329,50 @@ export class EmployeeService {
             
         } catch (error) {
             console.error('Failed to delete employee:', error);
+            throw error;
+        }
+    }
+    
+    // Ensure at least one active admin exists
+    async ensureActiveAdmin() {
+        try {
+            const { data: activeAdmins, error } = await this.supabase
+                .from('employees')
+                .select('*')
+                .eq('role', 'admin')
+                .eq('is_active', true);
+            
+            if (error) throw error;
+            
+            // If no active admins, activate the first admin found
+            if (activeAdmins.length === 0) {
+                const { data: allAdmins, error: allAdminsError } = await this.supabase
+                    .from('employees')
+                    .select('*')
+                    .eq('role', 'admin')
+                    .limit(1);
+                
+                if (allAdminsError) throw allAdminsError;
+                
+                if (allAdmins.length > 0) {
+                    const { data, error: updateError } = await this.supabase
+                        .from('employees')
+                        .update({ is_active: true })
+                        .eq('id', allAdmins[0].id)
+                        .select()
+                        .single();
+                    
+                    if (updateError) throw updateError;
+                    
+                    console.log('Activated admin account:', data.name);
+                    return data;
+                }
+            }
+            
+            return activeAdmins[0] || null;
+            
+        } catch (error) {
+            console.error('Failed to ensure active admin:', error);
             throw error;
         }
     }
